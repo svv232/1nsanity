@@ -1,1 +1,7 @@
-LLVMChallenge
+*.so
+test
+*.bc 
+*.ll 
+*.so 
+*.dwo
+core
