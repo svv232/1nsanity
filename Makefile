@@ -24,4 +24,4 @@ check:
 	$(CPP) -o test out.bc 
 
 clean:
-	rm -rf *.bc *.ll *.so *.dwo #$(OUT)
+	rm -rf *.bc *.ll *.so *.dwo
