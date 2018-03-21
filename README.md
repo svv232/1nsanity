@@ -1,1 +1,1 @@
-LLVM pass that heavily obfuscates strings and numbers
+LLVM pass that obfuscates against symbolic execution 
