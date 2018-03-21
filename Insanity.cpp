@@ -3,7 +3,8 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/raw_ostream.h"
-#include <time.h>
+#include <vector>
+
 using namespace llvm;
 
 namespace {
@@ -12,80 +13,66 @@ namespace {
         static char ID;
         Insanity(): FunctionPass(ID) {}
         virtual bool runOnFunction(Function &F) override;
-        Value * intToVal(const int integer, Instruction * I) const;
-        bool bad(Instruction &I) const;
-        void unfold(Instruction * I, Instruction * prev);
-        void dumpAll(BasicBlock * B) const;
+        Value * obfuscate(Instruction * I);
+        void dumpAll(Function &F) const;
+        void clean_up(std::vector<Instruction*>& clean);
+        void replaceAll(Instruction * I, Value * V);
+        Value * valNeg(Value * oper);
+
     };
 
-bool Insanity::bad(Instruction &I) const{
-    switch (I.getOpcode()){
-    case Instruction::Store: {
-       return true;
+Value * Insanity::valNeg(Value * oper){
+    auto cint = dyn_cast<ConstantInt>(oper);
+    return ConstantInt::get(oper -> getContext()
+            ,-(cint -> getValue()));
+}
+
+void Insanity::replaceAll(Instruction * I, Value * V){
+    BasicBlock::iterator iter(I);
+    Value * repl = dyn_cast<Value>(I);
+    for (;iter != I -> getParent() -> end(); ++iter){
+        for (size_t i = 0; i < iter -> getNumOperands(); ++i){
+            if (iter -> getOperand(i) == repl)
+                iter -> setOperand(i, V);
         }
     }
-    return false;
 }
 
-Value * Insanity::intToVal(const int integer, Instruction *I) const {
-    return ConstantInt::get(Type::getInt32Ty(I -> getContext()), integer);
+void Insanity::clean_up(std::vector<Instruction*>& clean){
+    for (auto& I: clean){I -> eraseFromParent();}
 }
 
-void Insanity::unfold(Instruction *I, Instruction * prev) {
-    unsigned original = 
-        dyn_cast<ConstantInt>(prev -> getOperand(0)) -> getSExtValue();
-        
-    srand(time(0));
-
-    unsigned random = rand();
-    
-    prev -> setOperand(0,intToVal(random, prev));
-
-    Value * xored = intToVal(random ^ original ,I);
-    
-    IRBuilder<> * builder = new IRBuilder<>(I);
-    
-    Value * alloc = 
-        builder -> CreateAlloca(Type::getInt32Ty(I -> getContext()));
-
-    builder -> CreateStore(xored, alloc);
-
-    Value * lval = 
-        builder -> CreateLoad(alloc, true);
-
-    Value * rval = 
-        builder -> CreateLoad(prev -> getOperand(1), true);
-
-    Value * xorRes = builder -> CreateXor(lval, rval);
-
-    builder -> CreateStore(xorRes, prev -> getOperand(1));
+Value * Insanity::obfuscate(Instruction * I){
+    IRBuilder <> * builder = new IRBuilder<>(I);
+    //Value * ope2 = valNeg(I -> getOperand(1)); 
+    return builder -> CreateSub(I -> getOperand(0), 
+            I -> getOperand(1),"tmp"); 
 }
 
 bool Insanity::runOnFunction(Function &F){
-	
-	//inst_iterator I = inst_begin(F), E = inst_end(F);
-    bool flag = false;
-    Instruction * prev;
-	//for (; I != E ; ++I) {
-    for (auto &B : F){
-        for (auto &I: B){
-		if (flag){
-            flag = false;
-			unfold(&I, prev);
+    auto I = inst_begin(F), E = inst_end(F);
+    bool modified = false;
+    std::vector<Instruction *> trash;
+    for(; I != E; ++I){
+        switch(I -> getOpcode()){
+            case(Instruction::Add): {
+                auto& ins = *I;
+                replaceAll(&ins, obfuscate(&ins));
+                trash.push_back(&ins);
+                modified = true;
+            }
+            }
         }
-        if (bad(I)){
-            flag = true;
-            prev = &I;
-        }
-        }
-    dumpAll(&B);
-    }
-	return true;
+    clean_up(trash);
+    dumpAll(F);
+    return modified;
 }
 
-void Insanity::dumpAll(BasicBlock * B) const{
-    for (const auto &I : *B){
-        I.dump();
+void Insanity::dumpAll(Function &F) const{
+    for (const auto &B : F){
+        for (const auto &I : B){
+            I.dump();
+        }
     }
 }
 }
