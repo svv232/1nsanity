@@ -3,3 +3,7 @@ initial obfuscation of simple instruction to produce opaque predicates
 turing machine emulator within in program 
 
 hail stone sequence convergence
+
+self modifying code control flow structure
+
+reflector for N and use for jump targe t in a placed jump table
