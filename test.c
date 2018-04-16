@@ -1,13 +1,25 @@
 #include <stdio.h>
 
-int main(){ 
-    /*
+int main(){
+/*    
+    int a,b;
+    scanf("%d", &a);
+    scanf("%d", &b);
+    if (a == b){
+        b *= 3;
+    }
+    if (b == 10){
+        printf("You win\n");
+    }
+    else {
+        printf("You lose");
+    }
+    */
     int a = 0;
     if (a == 0){
         a = 5;
     }
     printf("%d\n",a);
-    */
     /*
     int a, b, c, d, e;
     a = 17;
@@ -48,9 +60,9 @@ int main(){
 	  }
 	  return 0;
     */
-    int a = 5;
+    /*
+    int a = 986;
     while (a != 1){
-        printf("%d\n", a);
         if ((a & 1) == 1){
             a *= 3;
             a += 1;
@@ -60,4 +72,5 @@ int main(){
         }
     }
     return a;
+    */
 }

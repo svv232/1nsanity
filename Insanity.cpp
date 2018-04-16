@@ -5,7 +5,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Module.h"
 
-
 #include <vector>
 #include <stdlib.h>
 #include <time.h>
@@ -138,6 +137,7 @@ Value * Insanity::obfuscateXor(Instruction * I){
     Value * andRes2 = builder -> CreateAnd(op1 ,negOp2);
     return builder -> CreateOr(andRes1, andRes2);
 }
+
 Value * Insanity::obfuscateOr(Instruction * I){
     IRBuilder <> * builder = new IRBuilder<>(I);
     Value * op1 = I -> getOperand(0);
@@ -146,6 +146,7 @@ Value * Insanity::obfuscateOr(Instruction * I){
     Value * xorRes = builder -> CreateXor(op1, op2);
     return builder -> CreateOr(andRes, xorRes);
 }
+
 Value * Insanity::obfuscateAnd(Instruction * I){
     IRBuilder <> * builder = new IRBuilder<>(I);
     Value * op1 = I -> getOperand(0);
@@ -155,6 +156,7 @@ Value * Insanity::obfuscateAnd(Instruction * I){
     Value * xorRes = builder -> CreateXor(op1, negOp1);
     return builder -> CreateAnd(xorRes, op1);
 }
+
 Value * Insanity::obfuscateSub(Instruction * I){
     IRBuilder <> * builder = new IRBuilder<>(I);
     Value * op1 = I -> getOperand(0);
@@ -162,14 +164,17 @@ Value * Insanity::obfuscateSub(Instruction * I){
     op2 = builder -> CreateSub(intToVal(0,I), op2); 
     return builder -> CreateAdd(op1, op2); 
 }
+
 Value * Insanity::obfuscateBr(BranchInst * I, Value * extra){
     if (I -> isConditional()){
-        errs() << "Help\n";
         Value * cond = I -> getOperand(0);
+
+        auto zero_32 = ConstantInt::get(Type::getInt32Ty(I -> getContext()),0);
         auto one_32 = ConstantInt::get(Type::getInt32Ty(I -> getContext()),1);
         auto two_32= ConstantInt::get(Type::getInt32Ty(I -> getContext()),2);
         auto three_32= ConstantInt::get(Type::getInt32Ty(I -> getContext()),3);
-    
+        auto six_32= ConstantInt::get(Type::getInt32Ty(I -> getContext()),6);
+
         auto one_1 = ConstantInt::get(Type::getInt1Ty(I -> getContext()),1);
         auto zero_1= ConstantInt::get(Type::getInt1Ty(I -> getContext()),0);
  
@@ -182,19 +187,24 @@ Value * Insanity::obfuscateBr(BranchInst * I, Value * extra){
                 "trap2", I -> getFunction());
  
         IRBuilder<> * trapBuilder = new IRBuilder<>(trap);
-        ConstantInt * special = cast<ConstantInt>(extra);
-        auto sw = trapBuilder -> CreateSwitch(special, op2, 2);
+        auto special = 
+            trapBuilder -> CreateZExt(trapBuilder -> CreateAnd(cond, one_1), 
+                    Type::getInt32Ty(I -> getContext()));
+
+        auto sw = trapBuilder -> CreateSwitch(special,trap2, 3);
         sw -> addCase(one_32, trap);
-        sw -> addCase(two_32, op3);
+        sw -> addCase(zero_32, op2);
+        sw -> addCase(six_32, op3);
         
         trapBuilder -> SetInsertPoint(trap2);
         Value * tr = trapBuilder -> CreateAnd(extra, intToVal(rand() % 150,I));  
         Value * ch = trapBuilder -> CreateXor(three_32, tr);
-        ConstantInt * swCase = cast<ConstantInt>(trapBuilder -> CreateAShr(ch, 3));
-        Value * spCond = trapBuilder -> CreateICmpUGT(
-                swCase, intToVal(rand() % 326,I ));
+        Value * teen = trapBuilder -> CreateMul(ch, six_32);
+        Value * sw2 = trapBuilder -> CreateMul(teen, intToVal(8, I));
+        auto spCond = trapBuilder -> CreateICmpUGT(
+                 intToVal(rand() % 95,I ), sw2);
 
-        auto tr2 = trapBuilder -> CreateSwitch(spCond, op2);
+        auto tr2 = trapBuilder -> CreateSwitch(spCond, op2);  
                 tr2 -> addCase(one_1, trap);
                 tr2 -> addCase(zero_1, op3);
 
@@ -204,10 +214,10 @@ Value * Insanity::obfuscateBr(BranchInst * I, Value * extra){
             cast<ConstantInt>
             (builder -> CreateZExt(cond, Type::getInt32Ty(I -> getContext())));
         
-        auto switcher = builder -> CreateSwitch(longCon, op2,3);
-        switcher -> addCase(one_32, op3);
-        switcher -> addCase(three_32, trap);
-        switcher -> addCase(two_32, trap2);
+        auto switcher = builder -> CreateSwitch(longCon, trap,3);
+        switcher -> addCase(one_32, trap2);
+        switcher -> addCase(three_32, op2);
+        switcher -> addCase(two_32, op3);
         return switcher;
     }
     return extra;
@@ -263,24 +273,24 @@ bool Insanity::runOnFunction(Function &F){
                     int n = rand();
                     Value * retVal = insertHailStoneQuery(n, &ins);
                     obfuscateBr(br, retVal);
-                    trash.push_back(br);                    
+                    trash.push_back(br);
                     modified = true;
                 }
                 break;
             }
         }
-        }    
+        }
+        clean_up(trash);
         dumpAll(F);
         }
-    clean_up(trash);
     return modified;
 }
-
 void Insanity::dumpAll(Function &F) const{
     for (const auto &B : F)
         for (const auto &I : B)
             I.dump();
 }
 }
+
 char Insanity::ID = 0;
 static RegisterPass<Insanity> X("1nsanity","Insanity"); 

@@ -5,3 +5,4 @@ test
 *.so 
 *.dwo
 core
+.gdb_history
