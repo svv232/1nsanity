@@ -63,6 +63,7 @@ int main(){
     /*
     int a = 986;
     while (a != 1){
+        printf("%d\n", a);
         if ((a & 1) == 1){
             a *= 3;
             a += 1;

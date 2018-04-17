@@ -6,6 +6,7 @@
 #include "llvm/IR/Module.h"
 
 #include <vector>
+#include <unordered_set>
 #include <stdlib.h>
 #include <time.h>
 
@@ -21,7 +22,8 @@ struct Insanity: public FunctionPass {
     Value * obfuscateOr(Instruction * I); 
     Value * obfuscateAnd(Instruction * I); 
     Value * obfuscateSub(Instruction * I);  
-    Value * obfuscateBr(BranchInst * I, Value * V);
+    Value * obfuscateBr(BranchInst * I, Value * V, 
+            std::unordered_set<BasicBlock *>& blacklist);
     void dumpAll(Function &F) const;
     void clean_up(std::vector<Instruction*>& clean);
     Value * intToVal(const int intgr, Instruction * I);
@@ -165,7 +167,9 @@ Value * Insanity::obfuscateSub(Instruction * I){
     return builder -> CreateAdd(op1, op2); 
 }
 
-Value * Insanity::obfuscateBr(BranchInst * I, Value * extra){
+
+Value * Insanity::obfuscateBr(BranchInst * I, Value * extra, 
+        std::unordered_set<BasicBlock *>& blacklist){
     if (I -> isConditional()){
         Value * cond = I -> getOperand(0);
 
@@ -218,15 +222,80 @@ Value * Insanity::obfuscateBr(BranchInst * I, Value * extra){
         switcher -> addCase(one_32, trap2);
         switcher -> addCase(three_32, op2);
         switcher -> addCase(two_32, op3);
+
         return switcher;
     }
-    return extra;
+    else {
+        auto zero_32 = ConstantInt::get(Type::getInt32Ty(I -> getContext()),0);
+        auto one_32 = ConstantInt::get(Type::getInt32Ty(I -> getContext()),1);
+        auto two_32= ConstantInt::get(Type::getInt32Ty(I -> getContext()),2);
+     
+        BasicBlock * op1 = dyn_cast<BasicBlock>(I -> getOperand(0));
+        BasicBlock * loop = BasicBlock::Create(I -> getContext(), 
+                "loop", I -> getFunction());
+        BasicBlock * flatten = BasicBlock::Create(I -> getContext(),
+                "flatten", I -> getFunction());
+        BasicBlock * conditional = BasicBlock::Create(I -> getContext(),
+                "conditional", I -> getFunction());
+        BasicBlock * trap = BasicBlock::Create(I -> getContext(),
+                "second_trap", I -> getFunction()); 
+        BasicBlock * trueVal = BasicBlock::Create(I -> getContext(),
+                "true", I -> getFunction());
+        BasicBlock * falseVal = BasicBlock::Create(I -> getContext(),
+                "false", I -> getFunction());
+
+        blacklist.insert(loop);
+        blacklist.insert(flatten);
+        blacklist.insert(conditional);
+        blacklist.insert(trap);
+        blacklist.insert(trueVal);
+        blacklist.insert(falseVal);
+        
+        IRBuilder <> * builder = new IRBuilder<>(loop); 
+        LLVMContext &c = I -> getContext();
+
+        Value * space = builder -> CreateAlloca(Type::getInt32Ty(c));
+        Value * predicate = builder -> CreateAlloca(Type::getInt32Ty(c));
+        builder -> CreateStore(extra, predicate);
+        builder -> CreateStore(intToVal(0, c), space);
+        builder -> CreateBr(flatten);
+     
+        builder -> SetInsertPoint(flatten);
+        Value * swCase = builder -> CreateLoad(space);
+        auto switcher = builder -> CreateSwitch(swCase, trap, 3);
+        switcher -> addCase(zero_32, conditional);
+        switcher -> addCase(one_32, op1);
+        switcher -> addCase(two_32, trap);
+
+        builder -> SetInsertPoint(conditional);
+        Value * condition = builder -> CreateICmpUGT(builder -> CreateLoad(predicate),
+                intToVal(421 ,c));
+        builder -> CreateCondBr(condition, trueVal, falseVal);
+
+        builder -> SetInsertPoint(trueVal);
+        builder -> CreateStore(one_32,space);
+        builder -> CreateBr(flatten);
+
+        builder -> SetInsertPoint(falseVal);
+        builder -> CreateStore(two_32, space);
+        builder -> CreateBr(flatten);
+
+        builder -> SetInsertPoint(trap);
+        auto newSwitcher = builder -> CreateSwitch(builder -> CreateLoad(space)
+                , trap, 2);
+        newSwitcher -> addCase(zero_32, trap);
+        newSwitcher -> addCase(two_32, op1);
+
+        IRBuilder <> * official = new IRBuilder<>(I);
+        return official -> CreateBr(loop);
+    }
 }
 
 bool Insanity::runOnFunction(Function &F){
     auto I = inst_begin(F), E = inst_end(F);
     bool modified = false;
     std::vector<Instruction *> trash;
+    std::unordered_set<BasicBlock *> blacklist;
     if (I -> getFunction() != generateHailStone(&*I)){
     for(; I != E; ++I){
         switch(I -> getOpcode()){
@@ -266,18 +335,26 @@ bool Insanity::runOnFunction(Function &F){
                 break;
             }
             case(Instruction::Br): {
-                auto& ins = *I; 
+                auto& ins = *I;
                 BranchInst * br = cast<BranchInst>(&ins); 
-                if (br -> isConditional()){    
-                    srand(time(0));
-                    int n = rand();
-                    Value * retVal = insertHailStoneQuery(n, &ins);
-                    obfuscateBr(br, retVal);
-                    trash.push_back(br);
-                    modified = true;
+                if (blacklist.find(br -> getParent()) == blacklist.end()){        
+                    if (br -> isConditional()){    
+                        srand(time(0));
+                        int n = rand();
+                        Value * retVal = insertHailStoneQuery(n, &ins);
+                        obfuscateBr(br, retVal, blacklist);
+                        trash.push_back(br);
+                        modified = true;
+                        } 
+                    else {
+                        obfuscateBr(br, intToVal(rand() % 420, &ins),blacklist);
+                        trash.push_back(br);
+                        modified = true;
+                    }
                 }
                 break;
             }
+        
         }
         }
         clean_up(trash);
@@ -285,6 +362,7 @@ bool Insanity::runOnFunction(Function &F){
         }
     return modified;
 }
+
 void Insanity::dumpAll(Function &F) const{
     for (const auto &B : F)
         for (const auto &I : B)
