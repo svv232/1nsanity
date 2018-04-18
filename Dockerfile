@@ -12,4 +12,5 @@ RUN apt-get update && apt-get install -y \
 ADD . /home/Insanity
 
 WORKDIR /home/Insanity
-CMD /bin/bash
+
+CMD ["/bin/bash"]

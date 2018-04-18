@@ -337,20 +337,18 @@ bool Insanity::runOnFunction(Function &F){
             case(Instruction::Br): {
                 auto& ins = *I;
                 BranchInst * br = cast<BranchInst>(&ins); 
-                if (blacklist.find(br -> getParent()) == blacklist.end()){        
+                if (blacklist.find(br -> getParent()) == blacklist.end()){ 
                     if (br -> isConditional()){    
                         srand(time(0));
                         int n = rand();
                         Value * retVal = insertHailStoneQuery(n, &ins);
                         obfuscateBr(br, retVal, blacklist);
-                        trash.push_back(br);
-                        modified = true;
                         } 
                     else {
                         obfuscateBr(br, intToVal(rand() % 420, &ins),blacklist);
-                        trash.push_back(br);
-                        modified = true;
-                    }
+                        } 
+                    trash.push_back(br);
+                    modified = true;
                 }
                 break;
             }
@@ -362,7 +360,6 @@ bool Insanity::runOnFunction(Function &F){
         }
     return modified;
 }
-
 void Insanity::dumpAll(Function &F) const{
     for (const auto &B : F)
         for (const auto &I : B)

@@ -1,25 +1,19 @@
 #include <stdio.h>
 
-int main(){
-/*    
-    int a,b;
-    scanf("%d", &a);
-    scanf("%d", &b);
-    if (a == b){
-        b *= 3;
-    }
-    if (b == 10){
-        printf("You win\n");
-    }
-    else {
-        printf("You lose");
-    }
-    */
+int main(){    
     int a = 0;
     if (a == 0){
         a = 5;
     }
     printf("%d\n",a);
+    /*
+    int a[] = {1,2,3,4,5,6,7,8,9};
+    int total = 0;
+    for (int i = 0; i < (sizeof(a)/ sizeof(int)); ++i){
+        total += a[i];
+    }
+    printf("%d\n", total);
+    */
     /*
     int a, b, c, d, e;
     a = 17;
@@ -59,7 +53,7 @@ int main(){
 		}
 	  }
 	  return 0;
-    */
+      */
     /*
     int a = 986;
     while (a != 1){

@@ -1,0 +1,10 @@
+-----NORMAL------
+real	1m17.714s
+user	1m3.453s
+sys	0m14.607s
+-----NORMAL-------
+----OBFUSCATED----
+real   10m34.944s
+user    10m17.969s
+sys 0m17.233s
+----OBFUSCATED----

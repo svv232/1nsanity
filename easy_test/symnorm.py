@@ -2,11 +2,11 @@
 import angr
 
 def main():
-    proj = angr.Project("./test")
-    find = [0x400761]
-    avoid = [0x400770]
+    proj = angr.Project("./normal")
+    find = [0x40096a]
+    avoid = [0x400971]
     
-    state = proj.factory.blank_state(addr=0x400640)
+    state = proj.factory.blank_state(addr=0x4008ef)
     sm = proj.factory.simulation_manager(state)
     ex = sm.explore(find = find, avoid = avoid)
     
