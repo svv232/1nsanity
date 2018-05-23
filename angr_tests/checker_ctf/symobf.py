@@ -14,6 +14,6 @@ def main():
     flag = final.posix.dumps(0)
     print(flag.rstrip('\x00'))
     
- 
+
 if "__main__" == __name__:
     main()

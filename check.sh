@@ -22,6 +22,5 @@ function clean {
     fi
     rm a.out;
 }
-
 clean;
 check;

@@ -1,11 +1,17 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(){    
+    char* input = malloc(sizeof(char));
+    fgets(input, sizeof(input),stdin);
+    //printf("%s \n", input);
+    /*
     int a = 0;
     if (a == 0){
         a = 5;
     }
     printf("%d\n",a);
+    */
     /*
     int a[] = {1,2,3,4,5,6,7,8,9};
     int total = 0;

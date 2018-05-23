@@ -31,6 +31,7 @@ struct Insanity : public FunctionPass {
   void replaceAll(Instruction *I, Value *V);
   Value *insertHailStoneQuery(int n, Instruction *I);
   Function *generateHailStone(Instruction *I);
+  Value *obfuscateBuffer(Instruction * I, Value * V);
 };
 
 Value *Insanity::intToVal(const int intgr, Instruction *I) {
@@ -282,13 +283,31 @@ Value *Insanity::obfuscateBr(BranchInst *I, Value *extra,
   }
 }
 
+Value * Insanity::obfuscateBuffer(Instruction * I, Value * V){
+    IRBuilder<> * symbBuild = new IRBuilder<>(I);
+    return V;
+}
+
 bool Insanity::runOnFunction(Function &F) {
   auto I = inst_begin(F), E = inst_end(F);
   bool modified = false;
   std::vector<Instruction *> trash;
+  std::vector<Value *> bufferQueue;
   std::unordered_set<BasicBlock *> blacklist;
   if (I->getFunction() != generateHailStone(&*I)) {
     for (; I != E; ++I) {
+      if (bufferQueue.size()){
+        auto &ins = *I;
+        while (bufferQueue.size()){
+          errs() << "--------------------\n";
+          if (bufferQueue.back() -> getType() -> 
+              getPointerElementType() -> isIntegerTy(8)){
+              obfuscateBuffer(&ins, bufferQueue.back());
+          }
+          bufferQueue.pop_back();
+          errs() << "--------------------\n";
+        }
+      }
       switch (I->getOpcode()) {
       case (Instruction::Add): {
         auto &ins = *I;
@@ -339,6 +358,17 @@ bool Insanity::runOnFunction(Function &F) {
           }
           trash.push_back(br);
           modified = true;
+        }
+        break;
+      }
+      case (Instruction::Call): {
+        auto &ins = *I;
+        CallInst *call = cast<CallInst>(&ins);
+        for (const auto& it: call -> arg_operands()){
+          Value * val = &*it;
+          if (val -> getType() -> isPointerTy()){
+          bufferQueue.push_back(val);
+          }
         }
         break;
       }

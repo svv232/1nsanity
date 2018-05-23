@@ -1,0 +1,39 @@
+loop predicated on symbolic in variable 
+
+for i = 0 i< input_byte i++
+forces engine to create 256 new states
+
+check for char* stack allocations that are made initially in basic blocks
+
+add bogus switches and recursive calls to further obfuscate hailstone
+
+consider inlining hailstone
+
+test with c input look at char * allocations and look at fgets vs scanf
+check size allocations.
+
+
+Have symbolic input map
+getfunction to identifier -> 
+Detect symbolic values with fgets buffer args
+
+can I load symbols and check if they take symbolic input?
+
+------NEXT PHASE-------
+load module object
+
+iterate through functions
+
+if an arg is a buffer put it in a map
+must correctly identify int type in 
+buffer
+
+when func appears run function each byte
+after the func is called
+
+separate this into a state explosion func
+inline state explosion func 
+
+make sure the state explosion func
+relies on some predicate
+
