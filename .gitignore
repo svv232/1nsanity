@@ -6,3 +6,6 @@ test
 *.dwo
 core
 .gdb_history
+Insanity_Progress.cpp
+check.sh
+NOTES
